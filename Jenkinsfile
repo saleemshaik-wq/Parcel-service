@@ -1,76 +1,78 @@
-pipeline { 
+pipeline {
     agent { label 'slave2' }
 
-    tools {  
+    tools {
         jdk 'java17'
         maven 'maven3'
-    } 
+    }
 
     stages {
-        stage('Checkout Code') {
-            steps { 
+
+        stage('Checkout') {
+            steps {
                 checkout scm
             }
         }
 
-        stage('Build with Maven') {
+        stage('Build') {
             steps {
                 sh 'mvn clean package -DskipTests'
             }
         }
 
-        stage('Archive Artifact') {
+        stage('Run App') {
             steps {
-                archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
-                echo "Artifact archived successfully."
+                echo "Starting App..."
+
+                sh '''
+                    nohup java -jar target/*.jar > app.log 2>&1 &
+                    echo $! > app.pid
+                '''
+
+                sleep 15
             }
         }
 
-        stage('Run Application & Validate') {
+        stage('Validate App') {
             steps {
+                echo "Checking app..."
+
                 script {
-                    echo "Starting Spring Boot App..."
+                    def code = sh(
+                        script: 'curl -s -o /dev/null -w "%{http_code}" http://localhost:8080',
+                        returnStdout: true
+                    ).trim()
 
-                    // Run app in background
-                    sh 'nohup java -jar target/*.jar > app.log 2>&1 & echo $! > app.pid'
-
-                    sleep 10
-
-                    echo "Checking if app started..."
-
-                    def status = sh(script: 'curl --write-out "%{http_code}" --silent --output /dev/null http://localhost:8080', 
-                                     returnStdout: true).trim()
-
-                    if (status != "200") {
-                        error "App failed to start! HTTP Status: ${status}"
+                    if (code != "200") {
+                        error "App failed to start! Status: ${code}"
                     } else {
-                        echo "App started successfully ✔"
+                        echo "App is running ✔"
                     }
                 }
             }
         }
 
-        stage('Wait 5 minutes') {
+        stage('Stop App') {
             steps {
-                echo 'Keeping app running for 5 minutes...'
-                sleep(time: 5, unit: 'MINUTES')
-            }
-        }
+                echo "Stopping App..."
 
-        stage('Stop Application') {
-            steps {
-                script {
-                    echo "Stopping app..."
-                    sh 'kill $(cat app.pid) || true'
-                }
+                sh '''
+                    if [ -f app.pid ]; then
+                        kill $(cat app.pid) || true
+                    fi
+                '''
             }
         }
     }
 
     post {
         always {
-            echo "Post cleanup..."
-            sh 'pkill -f "java -jar" || true'
+            echo "Cleanup"
+            sh '''
+                if [ -f app.pid ]; then
+                    kill $(cat app.pid) || true
+                fi
+            '''
         }
     }
 }
