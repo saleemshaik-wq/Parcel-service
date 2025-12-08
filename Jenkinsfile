@@ -63,6 +63,24 @@ pipeline {
                 '''
             }
         }
+
+        stage('Upload to JFrog') {
+            steps {
+                echo "Uploading artifact to JFrog..."
+
+                rtUpload(
+                    serverId: 'jfrog-server',       // your configured Artifactory server in Jenkins
+                    spec: '''{
+                        "files": [
+                            {
+                                "pattern": "target/*.jar",
+                                "target": "my-repo/"
+                            }
+                        ]
+                    }'''
+                )
+            }
+        }
     }
 
     post {
