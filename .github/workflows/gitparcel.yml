@@ -10,7 +10,7 @@ jobs:
     runs-on: self-hosted  # matches Jenkins agent label 
 
     steps: 
-      - name: Checkout repository
+      - name: Checkout repository 
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
