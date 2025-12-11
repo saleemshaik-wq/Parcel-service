@@ -7,7 +7,7 @@ on:
  
 jobs: 
   build:
-    runs-on: self-hosted  # matches Jenkins agent label
+    runs-on: self-hosted  # matches Jenkins agent label 
 
     steps: 
       - name: Checkout repository
