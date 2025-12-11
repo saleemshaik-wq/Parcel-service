@@ -3,7 +3,7 @@ name: Build & Run Spring Boot App
 on:
   push:
     branches:
-      - feature-1
+      - feature-1 
  
 jobs:
   build:
